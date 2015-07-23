@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 clean_debian() {
@@ -26,7 +25,7 @@ if [ $# -lt 3 ]
 then
 	echo "author: Kamil Trzcinski (http://ayufan.eu)"
 	echo "license: GPL"
-	echo "usage: $0 <image-file> <hostname> <release> [optional debootstrap args]" 1>&2
+	echo "usage: $0 <image-file> <hostname> <release>  [optional debootstrap args]" 1>&2
 	exit 1
 fi
 
@@ -77,7 +76,7 @@ echo "Mounting root partition..."
 mount ${DISK}p2 $MNT_DIR || fail "cannot mount /"
 
 echo "Installing Debian $RELEASE..."
-debootstrap --include=less,vim,acpi-support-base,ca-certificates $* $RELEASE $MNT_DIR http://ftp.de.debian.org/debian || fail "cannot install $RELEASE into $DISK"
+debootstrap --include=less,vim,sudo,openssh-server,acpid,git,htop $* $RELEASE $MNT_DIR ftp://mirror.hetzner.de/debian || fail "cannot install $RELEASE into $DISK"
 
 echo "Configuring system..."
 cat <<EOF > $MNT_DIR/etc/fstab
@@ -97,27 +96,24 @@ ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 EOF
 
-cat <<EOF > $MNT_DIR/etc/network/interfaces
-auto lo
-iface lo inet loopback
+if [ -f $HOSTNAME.interfaces ]; then
+  echo "Found $HOSTNAME.interfaces copying it to the image"
+  cp $HOSTNAME.interfaces $MNT_DIR/etc/network/interfaces
+else
+  echo "File $HOSTNAME.interfaces not found, using default settings instead"
+  cat <<EOF > $MNT_DIR/etc/network/interfaces
+  auto lo
+  iface lo inet loopback
 
-auto eth0
-iface eth0 inet dhcp
-EOF
+  auto eth0
+  iface eth0 inet dhcp
+  EOF
+fi
 
-cat <<EOF > $MNT_DIR/etc/resolv.conf
-nameserver 194.94.127.196
-nameserver 194.94.127.27
-EOF
+echo "Copying authorized_keys to image"
+mkdir -p $MNT_DIR/root/.ssh
+cp /root/.ssh/authorized_keys $MNT_DIR/root/.ssh
 
-cat <<EOF >> $MNT_DIR/etc/inittab
-T0:23:respawn:/sbin/getty -L ttyS0 9600 vt100
-EOF
-
-cat <<EOF > $MNT_DIR/etc/apt/apt.conf
-APT::Install-Recommends "0";
-APT::Install-Suggests "0";
-EOF
 
 mount --bind /dev/ $MNT_DIR/dev || fail "cannot bind /dev"
 chroot $MNT_DIR mount -t ext4 ${DISK}p1 /boot || fail "cannot mount /boot"
@@ -125,9 +121,6 @@ chroot $MNT_DIR mount -t proc none /proc || fail "cannot mount /proc"
 chroot $MNT_DIR mount -t sysfs none /sys || fail "cannot mount /sys"
 LANG=C DEBIAN_FRONTEND=noninteractive chroot $MNT_DIR apt-get install -y -q linux-image-amd64 grub-pc || fail "cannot install linux-image and grub"
 chroot $MNT_DIR grub-install $DISK || fail "cannot install grub"
-
-sed -i "s|quiet|console=tty0 console=ttyS0,115200n8|g" $MNT_DIR/etc/default/grub
-
 chroot $MNT_DIR update-grub || fail "cannot update grub"
 
 sed -i "s|${DISK}p1|/dev/vda1|g" $MNT_DIR/boot/grub/grub.cfg
