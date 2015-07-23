@@ -76,7 +76,7 @@ echo "Mounting root partition..."
 mount ${DISK}p2 $MNT_DIR || fail "cannot mount /"
 
 echo "Installing Debian $RELEASE..."
-debootstrap --include=less,vim,sudo,openssh-server,acpid,git,htop $* $RELEASE $MNT_DIR ftp://mirror.hetzner.de/debian || fail "cannot install $RELEASE into $DISK"
+debootstrap --include=less,vim,sudo,openssh-server,acpid,git,htop $* $RELEASE $MNT_DIR http://ftp.pl.debian.org/debian || fail "cannot install $RELEASE into $DISK"
 
 echo "Configuring system..."
 cat <<EOF > $MNT_DIR/etc/fstab
