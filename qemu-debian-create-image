@@ -96,7 +96,7 @@ ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 EOF
 
-if [ -f $HOSTNAME.interfaces ]; then
+if [ -e $HOSTNAME.interfaces ]; then
   echo "Found $HOSTNAME.interfaces copying it to the image"
   cp $HOSTNAME.interfaces $MNT_DIR/etc/network/interfaces
 else
