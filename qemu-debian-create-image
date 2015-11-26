@@ -107,7 +107,7 @@ else
 
   auto eth0
   iface eth0 inet dhcp
-  EOF
+EOF
 fi
 
 echo "Copying authorized_keys to image"
